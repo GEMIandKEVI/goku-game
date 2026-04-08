@@ -1,122 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Goku vs Frieza: Final Stand</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAIYAN STANCE: BEYOND LIMIT</title>
     <style>
         :root { --goku-aura: #0cf; --frieza-aura: #a0f; }
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; color: white; }
         
-        /* Exploding Namek Background */
+        /* The Exploding Namek Stage */
         #stage { 
             width: 100vw; height: 100vh; 
-            background: radial-gradient(circle at 50% 100%, #821, #201, #000);
-            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 50% 100%, #a21, #201, #000);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        /* HUD Graphics */
+        /* Pro Fighter HUD */
         .hud-top { position: absolute; top: 30px; width: 90%; display: flex; justify-content: space-between; z-index: 10; }
-        .hp-outer { width: 400px; height: 25px; background: #222; border: 3px solid #fff; transform: skew(-20deg); box-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        .hp-inner { height: 100%; transition: width 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
-        #g-hp { background: linear-gradient(90deg, #05f, #0cf); width: 100%; }
-        #f-hp { background: linear-gradient(90deg, #70a, #f0f); width: 100%; }
+        .hp-outer { width: 350px; height: 30px; background: #222; border: 3px solid #fff; transform: skew(-20deg); overflow: hidden; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
+        .hp-inner { height: 100%; width: 100%; transition: width 0.2s ease-out; }
+        #g-hp { background: linear-gradient(90deg, #05f, #0cf); }
+        #f-hp { background: linear-gradient(90deg, #70a, #f0f); }
 
-        /* Fighter Sprites (CSS Art) */
-        .fighter { width: 120px; height: 180px; position: absolute; bottom: 30%; transition: 0.1s ease-out; }
+        /* Combatants */
+        .fighter { width: 140px; height: 200px; position: absolute; bottom: 30%; transition: transform 0.1s ease-out; }
         
-        /* Goku Styling */
         #goku { 
-            left: 20%; background: linear-gradient(#fb0, #f60); border-radius: 15px 50px 15px 15px;
-            box-shadow: 0 0 40px var(--goku-aura); filter: drop-shadow(0 0 10px #fff);
+            left: 15%; background: linear-gradient(#fb0, #f60); border-radius: 10px;
+            box-shadow: 0 0 50px var(--goku-aura); filter: drop-shadow(0 0 15px #fff);
         }
-        #goku::after { content: ''; position: absolute; top: -20px; width: 100%; height: 40px; background: #fff; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); opacity: 0.8; }
-
-        /* Frieza Styling */
         #frieza { 
-            right: 20%; background: linear-gradient(#eee, #999); border-radius: 50px 15px 15px 15px;
-            box-shadow: 0 0 40px var(--frieza-aura); border: 4px solid #a0f;
+            right: 15%; background: linear-gradient(#eee, #999); border-radius: 10px;
+            box-shadow: 0 0 50px var(--frieza-aura); border: 4px solid #a0f;
         }
 
-        /* Combat VFX */
+        /* Buttons & VFX */
         .attack-btn { 
-            position: absolute; bottom: 8%; padding: 25px 80px; font-size: 2.5rem; color: white;
-            background: linear-gradient(#f00, #900); border: 4px solid #fff; cursor: pointer;
-            border-radius: 10px; transform: skew(-10deg); text-shadow: 2px 2px #000;
-            animation: pulse 1.5s infinite;
+            position: absolute; bottom: 10%; padding: 25px 80px; font-size: 2.5rem; color: white;
+            background: linear-gradient(#f00, #900); border: 5px solid #fff; cursor: pointer;
+            border-radius: 15px; transform: skew(-10deg); text-shadow: 2px 2px #000;
+            z-index: 20;
         }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(255,0,0,0.7); } 100% { box-shadow: 0 0 0 30px rgba(255,0,0,0); } }
+        .attack-btn:active { transform: skew(-10deg) scale(0.95); }
         
-        .shake { animation: shake 0.2s; }
-        @keyframes shake { 0% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } 100% { transform: translate(0,0); } }
-        
-        .hit-fx { position: absolute; width: 200px; height: 200px; background: radial-gradient(circle, #fff, transparent); pointer-events: none; border-radius: 50%; display: none; }
-    </style>
-</head>
-<body>
-
-<div id="stage">
-    <div class="hud-top">
-        <div><div style="color:#0cf">GOKU [MUI]</div><div class="hp-outer"><div id="g-hp" class="hp-inner"></div></div></div>
-        <div><div style="color:#f0f; text-align:right">FRIEZA [FINAL]</div><div class="hp-outer"><div id="f-hp" class="hp-inner"></div></div></div>
-    </div>
-
-    <div id="goku" class="fighter"></div>
-    <div id="frieza" class="fighter"></div>
-    <div id="hit-fx" class="hit-fx"></div>
-
-    <button class="attack-btn" onclick="combo()">STRIKE</button>
-</div>
-
-<script>
-    let fHP = 100, gHP = 100;
-    const goku = document.getElementById('goku'), frieza = document.getElementById('frieza');
-    const fBar = document.getElementById('f-hp'), gBar = document.getElementById('g-hp');
-    const stage = document.getElementById('stage'), hitFx = document.getElementById('hit-fx');
-
-    function combo() {
-        if(fHP <= 0 || gHP <= 0) return;
-        
-        // Dash Strike
-        goku.style.transform = "translateX(400px) scale(1.2)";
-        
-        setTimeout(() => {
-            fHP -= 7;
-            updateHP();
-            showHit(frieza.offsetLeft, frieza.offsetTop);
-            stage.classList.add('shake');
-            
-            setTimeout(() => {
-                goku.style.transform = "translateX(0) scale(1)";
-                stage.classList.remove('shake');
-                if(fHP > 0) setTimeout(counter, 500);
-            }, 100);
-        }, 100);
-    }
-
-    function counter() {
-        frieza.style.transform = "translateX(-400px) scale(1.2)";
-        
-        setTimeout(() => {
-            gHP -= 10;
-            updateHP();
-            showHit(goku.offsetLeft, goku.offsetTop);
-            stage.classList.add('shake');
-
-            setTimeout(() => {
-                frieza.style.transform = "translateX(0) scale(1)";
-                stage.classList.remove('shake');
-            }, 100);
-        }, 100);
-    }
-
-    function showHit(x, y) {
-        hitFx.style.display = 'block';
-        hitFx.style.left = x + 'px';
-        hitFx.style.top = y + 'px';
-        setTimeout(() => { hitFx.style.display = 'none'; }, 100);
-    }
-
-    function updateHP() {
-        fBar.style.width = fHP + "%";
-        gBar.style.width = gHP + "%";
-        if(fHP <= 0) { alert("FRIEZA DEFEATED! You saved Namek."); location.reload(); }
-        if(gHP <=
+        .hit-flare { 
+            position: absolute; width: 250px; height: 250px; background
