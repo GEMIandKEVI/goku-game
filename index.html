@@ -1,124 +1,122 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Saiyan Stance: Namek Saga</title>
+    <title>Goku vs Frieza: Final Stand</title>
     <style>
-        body { margin: 0; background: #222; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; text-align: center; }
-        #game-container { position: relative; width: 100vw; height: 100vh; transition: background 2s; }
+        :root { --goku-aura: #0cf; --frieza-aura: #a0f; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
         
-        /* UI Elements */
-        #hud { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-around; font-size: 1.5rem; text-shadow: 2px 2px black; }
-        #story-box { position: absolute; bottom: 50px; width: 80%; left: 10%; background: rgba(0,0,0,0.8); border: 2px solid #0cf; padding: 15px; border-radius: 10px; font-style: italic; }
-        
-        /* Frieza Boss Bar */
-        #boss-ui { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 300px; }
-        #hp-bg { width: 100%; height: 20px; background: #333; border: 2px solid white; }
-        #hp-fill { width: 100%; height: 100%; background: #a0f; transition: width 0.2s; }
+        /* Exploding Namek Background */
+        #stage { 
+            width: 100vw; height: 100vh; 
+            background: radial-gradient(circle at 50% 100%, #821, #201, #000);
+            display: flex; align-items: center; justify-content: center;
+        }
 
-        /* Combat Button */
-        #click-zone { width: 200px; height: 200px; background: radial-gradient(circle, #fff 0%, #0cf 70%); border-radius: 50%; margin: 150px auto; cursor: pointer; box-shadow: 0 0 20px #0cf; transition: transform 0.1s; }
-        #click-zone:active { transform: scale(0.9); }
-        .mui-glow { box-shadow: 0 0 50px #fff, 0 0 100px #0cf !important; }
+        /* HUD Graphics */
+        .hud-top { position: absolute; top: 30px; width: 90%; display: flex; justify-content: space-between; z-index: 10; }
+        .hp-outer { width: 400px; height: 25px; background: #222; border: 3px solid #fff; transform: skew(-20deg); box-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .hp-inner { height: 100%; transition: width 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        #g-hp { background: linear-gradient(90deg, #05f, #0cf); width: 100%; }
+        #f-hp { background: linear-gradient(90deg, #70a, #f0f); width: 100%; }
+
+        /* Fighter Sprites (CSS Art) */
+        .fighter { width: 120px; height: 180px; position: absolute; bottom: 30%; transition: 0.1s ease-out; }
+        
+        /* Goku Styling */
+        #goku { 
+            left: 20%; background: linear-gradient(#fb0, #f60); border-radius: 15px 50px 15px 15px;
+            box-shadow: 0 0 40px var(--goku-aura); filter: drop-shadow(0 0 10px #fff);
+        }
+        #goku::after { content: ''; position: absolute; top: -20px; width: 100%; height: 40px; background: #fff; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); opacity: 0.8; }
+
+        /* Frieza Styling */
+        #frieza { 
+            right: 20%; background: linear-gradient(#eee, #999); border-radius: 50px 15px 15px 15px;
+            box-shadow: 0 0 40px var(--frieza-aura); border: 4px solid #a0f;
+        }
+
+        /* Combat VFX */
+        .attack-btn { 
+            position: absolute; bottom: 8%; padding: 25px 80px; font-size: 2.5rem; color: white;
+            background: linear-gradient(#f00, #900); border: 4px solid #fff; cursor: pointer;
+            border-radius: 10px; transform: skew(-10deg); text-shadow: 2px 2px #000;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(255,0,0,0.7); } 100% { box-shadow: 0 0 0 30px rgba(255,0,0,0); } }
+        
+        .shake { animation: shake 0.2s; }
+        @keyframes shake { 0% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } 100% { transform: translate(0,0); } }
+        
+        .hit-fx { position: absolute; width: 200px; height: 200px; background: radial-gradient(circle, #fff, transparent); pointer-events: none; border-radius: 50%; display: none; }
     </style>
 </head>
-<body id="bg">
+<body>
 
-    <div id="game-container">
-        <div id="hud">
-            <div>LEVEL: <span id="lvl-txt">1 (Earth)</span></div>
-            <div>KI POWER: <span id="power-txt">0</span></div>
-        </div>
-
-        <div id="boss-ui">
-            <div style="color: #a0f; font-weight: bold; margin-bottom: 5px;">LORD FRIEZA</div>
-            <div id="hp-bg"><div id="hp-fill"></div></div>
-        </div>
-
-        <div id="click-zone" onclick="train()"></div>
-
-        <div id="story-box">
-            <span id="story-txt">Goku: "I need to get stronger before I reach Namek!"</span>
-        </div>
+<div id="stage">
+    <div class="hud-top">
+        <div><div style="color:#0cf">GOKU [MUI]</div><div class="hp-outer"><div id="g-hp" class="hp-inner"></div></div></div>
+        <div><div style="color:#f0f; text-align:right">FRIEZA [FINAL]</div><div class="hp-outer"><div id="f-hp" class="hp-inner"></div></div></div>
     </div>
 
+    <div id="goku" class="fighter"></div>
+    <div id="frieza" class="fighter"></div>
+    <div id="hit-fx" class="hit-fx"></div>
+
+    <button class="attack-btn" onclick="combo()">STRIKE</button>
+</div>
+
 <script>
-    let power = 0;
-    let level = 1;
-    let friezaHP = 10000;
-    let isMUI = false;
+    let fHP = 100, gHP = 100;
+    const goku = document.getElementById('goku'), frieza = document.getElementById('frieza');
+    const fBar = document.getElementById('f-hp'), gBar = document.getElementById('g-hp');
+    const stage = document.getElementById('stage'), hitFx = document.getElementById('hit-fx');
 
-    const bg = document.getElementById('bg');
-    const powerTxt = document.getElementById('power-txt');
-    const lvlTxt = document.getElementById('lvl-txt');
-    const storyTxt = document.getElementById('story-txt');
-    const hpFill = document.getElementById('hp-fill');
-    const bossUI = document.getElementById('boss-ui');
-    const clickZone = document.getElementById('click-zone');
-
-    function train() {
-        if (level < 3) {
-            // Leveling Logic
-            power += 100;
-            powerTxt.innerText = power;
-            checkLevel();
-        } else {
-            // Boss Fight Logic
-            fightBoss();
-        }
+    function combo() {
+        if(fHP <= 0 || gHP <= 0) return;
         
-        // Visual Feedback
-        clickZone.style.boxShadow = isMUI ? "0 0 60px #fff" : "0 0 30px #0cf";
-    }
-
-    function checkLevel() {
-        if (power >= 2000 && level === 1) {
-            level = 2;
-            lvlTxt.innerText = "2 (Namek)";
-            bg.style.background = "#2e5a1e"; // Namek Sky
-            storyTxt.innerText = "Frieza: 'A Saiyan? How boring. Allow me to show you true despair!'";
-        } 
-        else if (power >= 5000 && level === 2) {
-            startBossFight();
-        }
-    }
-
-    function startBossFight() {
-        level = 3;
-        lvlTxt.innerText = "BOSS FIGHT";
-        bg.style.background = "#501"; // Exploding Namek
-        bossUI.style.display = "block";
-        storyTxt.innerText = "Goku: 'THIS ENDS NOW, FRIEZA! LIMIT BREAK!!'";
+        // Dash Strike
+        goku.style.transform = "translateX(400px) scale(1.2)";
         
-        // Trigger MUI Visuals
-        isMUI = true;
-        clickZone.classList.add('mui-glow');
+        setTimeout(() => {
+            fHP -= 7;
+            updateHP();
+            showHit(frieza.offsetLeft, frieza.offsetTop);
+            stage.classList.add('shake');
+            
+            setTimeout(() => {
+                goku.style.transform = "translateX(0) scale(1)";
+                stage.classList.remove('shake');
+                if(fHP > 0) setTimeout(counter, 500);
+            }, 100);
+        }, 100);
     }
 
-    function fightBoss() {
-        // Damage depends on power/form
-        let damage = isMUI ? 400 : 50;
-        friezaHP -= damage;
+    function counter() {
+        frieza.style.transform = "translateX(-400px) scale(1.2)";
         
-        // Update Boss Health Bar
-        let hpPercent = (friezaHP / 10000) * 100;
-        hpFill.style.width = hpPercent + "%";
+        setTimeout(() => {
+            gHP -= 10;
+            updateHP();
+            showHit(goku.offsetLeft, goku.offsetTop);
+            stage.classList.add('shake');
 
-        if (friezaHP <= 5000) {
-            storyTxt.innerText = "Frieza: 'IMPOSSIBLE! I AM THE EMPEROR OF THE UNIVERSE!'";
-        }
-
-        if (friezaHP <= 0) {
-            winGame();
-        }
+            setTimeout(() => {
+                frieza.style.transform = "translateX(0) scale(1)";
+                stage.classList.remove('shake');
+            }, 100);
+        }, 100);
     }
 
-    function winGame() {
-        hpFill.style.width = "0%";
-        storyTxt.innerText = "VICTORY! Frieza has been defeated. You have reached the pinnacle of Saiyan power!";
-        clickZone.style.display = "none";
-        bg.style.background = "radial-gradient(circle, #0cf, #fff)";
-        alert("GG! You finished the Namek Saga!");
+    function showHit(x, y) {
+        hitFx.style.display = 'block';
+        hitFx.style.left = x + 'px';
+        hitFx.style.top = y + 'px';
+        setTimeout(() => { hitFx.style.display = 'none'; }, 100);
     }
-</script>
-</body>
-</html>
+
+    function updateHP() {
+        fBar.style.width = fHP + "%";
+        gBar.style.width = gHP + "%";
+        if(fHP <= 0) { alert("FRIEZA DEFEATED! You saved Namek."); location.reload(); }
+        if(gHP <=
