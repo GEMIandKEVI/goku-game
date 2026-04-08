@@ -1,164 +1,124 @@
-﻿<!DOCTYPE html><html><head><title>Beyond Limit: Yellow Flare</title><style>
-body{margin:0;background:#000;color:#fff;font-family:monospace;overflow:hidden}
-canvas{display:block;background:#001;image-rendering:pixelated;border-bottom:4px solid #f60}
-#ui{position:absolute;top:10px;left:10px;pointer-events:none;z-index:10;width:300px}
-.b{width:180px;height:12px;border:2px solid #fff;margin:4px 0;background:rgba(30,30,30,0.8)}
-#hp{background:#f33;width:100%;height:100%}
-#ki{background:#0cf;width:100%;height:100%}
-#t_xt{font-size:18px;font-weight:bold;text-shadow:2px 2px #000;color:#f60}
-#msg{position:absolute;bottom:20px;width:100%;text-align:center;color:#ff0;font-size:18px;text-shadow:2px 2px #000;animation:blink 1.5s infinite}
-@keyframes blink{0%{opacity:0.3}50%{opacity:1}100%{opacity:0.3}}
-</style></head><body>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Saiyan Stance: Namek Saga</title>
+    <style>
+        body { margin: 0; background: #222; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; text-align: center; }
+        #game-container { position: relative; width: 100vw; height: 100vh; transition: background 2s; }
+        
+        /* UI Elements */
+        #hud { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-around; font-size: 1.5rem; text-shadow: 2px 2px black; }
+        #story-box { position: absolute; bottom: 50px; width: 80%; left: 10%; background: rgba(0,0,0,0.8); border: 2px solid #0cf; padding: 15px; border-radius: 10px; font-style: italic; }
+        
+        /* Frieza Boss Bar */
+        #boss-ui { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 300px; }
+        #hp-bg { width: 100%; height: 20px; background: #333; border: 2px solid white; }
+        #hp-fill { width: 100%; height: 100%; background: #a0f; transition: width 0.2s; }
 
+        /* Combat Button */
+        #click-zone { width: 200px; height: 200px; background: radial-gradient(circle, #fff 0%, #0cf 70%); border-radius: 50%; margin: 150px auto; cursor: pointer; box-shadow: 0 0 20px #0cf; transition: transform 0.1s; }
+        #click-zone:active { transform: scale(0.9); }
+        .mui-glow { box-shadow: 0 0 50px #fff, 0 0 100px #0cf !important; }
+    </style>
+</head>
+<body id="bg">
 
-<div id="ui">
-    <div id="t_xt">POWER: <span id="s">0</span> | <span id="f">Base</span></div>
-    <div class="b"><div id="hp"></div></div>
-    <div class="b"><div id="ki"></div></div>
-</div>
-<div id="msg">CLICK SCREEN TO ENABLE KI AUDIO</div>
-<canvas id="c"></canvas>
+    <div id="game-container">
+        <div id="hud">
+            <div>LEVEL: <span id="lvl-txt">1 (Earth)</span></div>
+            <div>KI POWER: <span id="power-txt">0</span></div>
+        </div>
 
+        <div id="boss-ui">
+            <div style="color: #a0f; font-weight: bold; margin-bottom: 5px;">LORD FRIEZA</div>
+            <div id="hp-bg"><div id="hp-fill"></div></div>
+        </div>
+
+        <div id="click-zone" onclick="train()"></div>
+
+        <div id="story-box">
+            <span id="story-txt">Goku: "I need to get stronger before I reach Namek!"</span>
+        </div>
+    </div>
 
 <script>
-const v=document.getElementById("c"),x=v.getContext("2d");
-v.width=window.innerWidth;v.height=window.innerHeight;
-let p={x:150,y:v.height/2,hp:100,ki:100},k={},b=[],e=[],sc=0,fc=0,form=0,shake=0,evo=0,paused=false;
-let cutscene=false,cutsceneTimer=0, noteCounter=0, audioStarted=false;
+    let power = 0;
+    let level = 1;
+    let friezaHP = 10000;
+    let isMUI = false;
 
+    const bg = document.getElementById('bg');
+    const powerTxt = document.getElementById('power-txt');
+    const lvlTxt = document.getElementById('lvl-txt');
+    const storyTxt = document.getElementById('story-txt');
+    const hpFill = document.getElementById('hp-fill');
+    const bossUI = document.getElementById('boss-ui');
+    const clickZone = document.getElementById('click-zone');
 
-const forms=["Base","SSJ1","SSJ2","SSJ3","God","UI Mastered"];
-const hair=["#000","#ff0","#ffef00","#ffffaa","#f33","#ffffff"];
-const uiNotes = [220, 293, 220, 261, 220, 293, 220, 329];
-
-
-// --- ADVANCED AUDIO ENGINE ---
-const au = new (window.AudioContext || window.webkitAudioContext)();
-function playKiBlastSound() {
-    if(!audioStarted) return;
-    const o=au.createOscillator(), g=au.createGain();
-    o.type='sine';
-    // The "Chirp": Start high, slide down fast, then back up
-    o.frequency.setValueAtTime(800, au.currentTime);
-    o.frequency.exponentialRampToValueAtTime(200, au.currentTime + 0.05);
-    o.frequency.exponentialRampToValueAtTime(600, au.currentTime + 0.2);
-    g.gain.setValueAtTime(0.1, au.currentTime);
-    g.gain.linearRampToValueAtTime(0, au.currentTime + 0.25);
-    o.connect(g); g.connect(au.destination);
-    o.start(); o.stop(au.currentTime + 0.25);
-}
-
-
-function playTone(freq, type, vol, len) {
-    if(!audioStarted) return;
-    const o=au.createOscillator(), g=au.createGain();
-    o.type=type; o.frequency.setValueAtTime(freq, au.currentTime);
-    g.gain.setValueAtTime(vol, au.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.0001, au.currentTime + len);
-    o.connect(g); g.connect(au.destination);
-    o.start(); o.stop(au.currentTime + len);
-}
-
-
-window.onclick = () => { if(!audioStarted) { au.resume(); audioStarted=true; document.getElementById("msg").style.display="none"; } };
-
-
-window.onkeydown=e=>{
-    if(!audioStarted) window.onclick();
-    let ky=e.key.toLowerCase();
-    if(ky==="m") paused=!paused;
-    if(paused || cutscene) return;
-    k[ky]=1;
-    if(e.key===" "){
-        e.preventDefault();
-        if(p.ki>=5 || form === 5){
-            b.push({x:p.x+35, y:p.y-5, vx:25+(form*3)});
-            playKiBlastSound();
-            if(form!==5)p.ki-=5;
+    function train() {
+        if (level < 3) {
+            // Leveling Logic
+            power += 100;
+            powerTxt.innerText = power;
+            checkLevel();
+        } else {
+            // Boss Fight Logic
+            fightBoss();
         }
-    } 
-    if(ky==="r" && sc>=(form+1)*1000) {
-        if(form===4 && sc>=4000){ cutscene=true; cutsceneTimer=300; shake=30; e=[]; b=[]; p.hp=100; }
-        else if(form<4){ form++; shake=30; evo=45; playTone(150, 'sawtooth', 0.2, 1.2); document.getElementById("f").innerText=forms[form]; }
-    }
-};
-window.onkeyup=e=>k[e.key.toLowerCase()]=0;
-
-
-function drG(x1,y1){
-    fc++;x.save();if(shake>0){x.translate(Math.random()*shake-shake/2, Math.random()*shake-shake/2); shake--}
-    let bn=Math.sin(fc*0.2)*4; x.translate(x1,y1+bn);
-    
-    if(cutscene) {
-        if(cutsceneTimer > 20){
-            x.fillStyle = fc%6<3 ? "rgba(0,150,255,0.7)" : "rgba(255,255,255,0.8)";
-            x.shadowColor="#fff"; x.shadowBlur=40; x.fillRect(-50,-2000, 100, 4000);
-            if(fc%8===0) { if(noteCounter >= uiNotes.length) noteCounter=0; playTone(uiNotes[noteCounter], 'square', 0.1, 0.2); noteCounter++; }
-        } else { x.fillStyle="#fff"; x.fillRect(-2000,-2000, 4000, 4000); }
-        x.restore(); return;
-    }
-
-
-    let aSz=45+(form*5);
-    if(k.c){
-        p.ki=Math.min(100,p.ki+3); shake=3;
-        if(fc%6===0) playTone(80 + (p.ki*1.5), 'sine', 0.05, 0.1);
-        for(let i=0; i<3; i++) {
-            x.fillStyle = i==0 ? "rgba(255,255,100,0.4)" : "rgba(255,255,255,0.3)";
-            x.beginPath(); x.ellipse(0, -10, (aSz+25)/2, (aSz+45)/1.5, 0, 0, 7); x.fill();
-        }
-    } else {
-        x.fillStyle=(form===5)?"rgba(255,255,255,0.3)":"rgba(0,200,255,0.15)";
-        x.beginPath();x.arc(0,0,aSz,0,7);x.fill();
-    }
-    
-    x.shadowBlur=15; x.shadowColor=(form===5)?"#fff":hair[form];
-    x.fillStyle="#f60";x.rotate(0.2);x.fillRect(-15,10,12,30);x.setTransform(1,0,0,1,x1,y1+bn);
-    x.rotate(-0.3);x.fillRect(5,12,12,28);x.setTransform(1,0,0,1,x1,y1+bn);
-    x.fillStyle="#f60";x.fillRect(-10,-10,20,32);x.fillStyle="#04f";x.fillRect(-10,-5,20,10);x.fillStyle="#fd9";
-    x.rotate(-1.1);x.fillRect(-18,-5,18,7);x.setTransform(1,0,0,1,x1,y1+bn);
-    x.rotate(0.4);x.fillRect(10,5,25,8);x.setTransform(1,0,0,1,x1,y1+bn);
-    x.fillStyle="#fd9";x.fillRect(-8,-25,18,18);x.fillStyle="#fff";x.fillRect(4,-20,5,3);
-    x.fillStyle=(form===5)?"#0cf":"#000";x.fillRect(7,-19,2,2);
-    x.fillStyle=hair[form];x.beginPath();x.moveTo(-15,-20);
-    if(form===0){x.lineTo(-35,-35);x.lineTo(-10,-55);x.lineTo(20,-45)}
-    else if(form<3){x.lineTo(-45,-50);x.lineTo(0,-85);x.lineTo(35,-50)}
-    else if(form===3){x.lineTo(-50,15);x.lineTo(-10,-95);x.lineTo(35,55)}
-    else if(form===4){x.lineTo(-40,-40);x.lineTo(0,-70);x.lineTo(30,-40)}
-    else{x.lineTo(-35,-45);x.lineTo(0,-75);x.lineTo(35,-45)}
-    x.fill();x.restore();
-}
-
-
-function lp(){
-    if(!paused){
-        x.fillStyle="#001";x.fillRect(0,0,v.width,v.height);
-        for(let i=0;i<25;i++){x.fillStyle="#fff";x.fillRect((i*555)%v.width,((i*fc*(cutscene?3:0.5))%v.height),2,2)}
-        if(!k.c && !cutscene){if(k.w)p.y-=9;if(k.s)p.y+=9;if(k.a)p.x-=9;if(k.d)p.x+=9}
-        if(!cutscene && Math.random()<0.045)e.push({x:v.width,y:Math.random()*v.height});
-        drG(p.x,p.y);
         
-        // --- YELLOW KI BLASTS ---
-        b.forEach((m,i)=>{
-            m.x+=m.vx;
-            x.save();
-            x.shadowBlur=15; x.shadowColor="#ff0";
-            x.fillStyle="#ff0"; x.beginPath(); x.arc(m.x, m.y, 10+(form*2), 0, 7); x.fill();
-            x.fillStyle="#fff"; x.beginPath(); x.arc(m.x-5, m.y, 6+(form*1), 0, 7); x.fill();
-            x.restore();
-            if(m.x>v.width)b.splice(i,1)
-        });
+        // Visual Feedback
+        clickZone.style.boxShadow = isMUI ? "0 0 60px #fff" : "0 0 30px #0cf";
+    }
 
+    function checkLevel() {
+        if (power >= 2000 && level === 1) {
+            level = 2;
+            lvlTxt.innerText = "2 (Namek)";
+            bg.style.background = "#2e5a1e"; // Namek Sky
+            storyTxt.innerText = "Frieza: 'A Saiyan? How boring. Allow me to show you true despair!'";
+        } 
+        else if (power >= 5000 && level === 2) {
+            startBossFight();
+        }
+    }
 
-        e.forEach((m,i)=>{
-            m.x-=(7+form*2);x.fillStyle="#222";x.fillRect(m.x,m.y,30,30);
-            if(Math.hypot(m.x-p.x,m.y-p.y)<35){p.hp-=20;e.splice(i,1);playTone(60,'sawtooth',0.1,0.3);if(p.hp<=0)location.reload()}
-            b.forEach((bl,bi)=>{if(Math.hypot(m.x-bl.x,m.y-bl.y)<35){e.splice(i,1);b.splice(bi,1);sc+=100}})
-        });
-        document.getElementById("hp").style.width=p.hp+"%";
-        document.getElementById("ki").style.width=(form===5?100:p.ki)+"%";
-        document.getElementById("s").innerText=sc;
-        if(cutscene) { cutsceneTimer--; if(cutsceneTimer<=0){cutscene=false;form=5;document.getElementById("f").innerText=forms[form];}}
-    } requestAnimationFrame(lp);
-}lp();
-</script></body></html>
+    function startBossFight() {
+        level = 3;
+        lvlTxt.innerText = "BOSS FIGHT";
+        bg.style.background = "#501"; // Exploding Namek
+        bossUI.style.display = "block";
+        storyTxt.innerText = "Goku: 'THIS ENDS NOW, FRIEZA! LIMIT BREAK!!'";
+        
+        // Trigger MUI Visuals
+        isMUI = true;
+        clickZone.classList.add('mui-glow');
+    }
+
+    function fightBoss() {
+        // Damage depends on power/form
+        let damage = isMUI ? 400 : 50;
+        friezaHP -= damage;
+        
+        // Update Boss Health Bar
+        let hpPercent = (friezaHP / 10000) * 100;
+        hpFill.style.width = hpPercent + "%";
+
+        if (friezaHP <= 5000) {
+            storyTxt.innerText = "Frieza: 'IMPOSSIBLE! I AM THE EMPEROR OF THE UNIVERSE!'";
+        }
+
+        if (friezaHP <= 0) {
+            winGame();
+        }
+    }
+
+    function winGame() {
+        hpFill.style.width = "0%";
+        storyTxt.innerText = "VICTORY! Frieza has been defeated. You have reached the pinnacle of Saiyan power!";
+        clickZone.style.display = "none";
+        bg.style.background = "radial-gradient(circle, #0cf, #fff)";
+        alert("GG! You finished the Namek Saga!");
+    }
+</script>
+</body>
+</html>
